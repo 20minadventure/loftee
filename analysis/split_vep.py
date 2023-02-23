@@ -9,7 +9,7 @@ from analysis.utils.load_spark import hl_init, SC
 from analysis.utils.dxpathlib import PathDx
 
 import pkg_resources
-file_path = pkg_resources.resource_filename('analysis', 'utils/vep-config.json')
+file_path = pkg_resources.resource_filename('analysis', 'vep-config.json')
 
 def main():
     db_ref = 'wgs_mt'
