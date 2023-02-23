@@ -45,7 +45,7 @@ def main():
                         array_elements_required=False,
                     )
                     mt = hl.split_multi_hts(mt)
-                    mt = hl.vep(mt, vep_config_path.rstr)
+                    mt = hl.vep(mt, vep_config_path)
 
                     mt.write(chr_b_path.rstr)
                 except Exception as e:
