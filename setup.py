@@ -6,6 +6,7 @@ setup(
     version="0.1",
     description="",
     packages=find_packages(),
+    include_package_data=True,
     entry_points={
         'console_scripts': [
             'split_vep = analysis.split_vep:main'

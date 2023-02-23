@@ -8,6 +8,8 @@ import dxpy
 from analysis.utils.load_spark import hl_init, SC
 from analysis.utils.dxpathlib import PathDx
 
+import pkg_resources
+file_path = pkg_resources.resource_filename('analysis', 'utils/vep-config.json')
 
 def main():
     db_ref = 'wgs_mt'
@@ -18,7 +20,7 @@ def main():
     hail_tmp_path = PathDx(database='hail_tmp')
 
     log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
-    vep_config_path = PathDx('analysis/utils/vep-config.json')
+    vep_config_path = PathDx(file_path)
 
     hl_init(tmp_dir=tmp_path.rstr, log=log_path)
 
