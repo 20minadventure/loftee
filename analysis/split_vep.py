@@ -20,7 +20,7 @@ def main():
     hail_tmp_path = PathDx(database='hail_tmp')
 
     log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
-    vep_config_path = PathDx(file_path)
+    vep_config_path = file_path
 
     hl_init(tmp_dir=tmp_path.rstr, log=log_path)
 
