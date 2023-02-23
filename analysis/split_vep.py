@@ -46,5 +46,6 @@ def main():
                     mt = hl.vep(mt, vep_config_path.rstr)
 
                     mt.write(chr_b_path.rstr)
-                except Exception:
+                except Exception as e:
                     print('ERROR: ', p)
+                    print(e)
