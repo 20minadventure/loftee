@@ -44,7 +44,7 @@ def main():
                         force_bgz=True,
                         array_elements_required=False,
                     )
-                    mt = hl.split_multi_hts(mt)
+                    mt = hl.split_multi_hts(mt, permit_shuffle=True)
                     mt = hl.vep(mt, vep_config_path.rstr)
 
                     mt.write(chr_b_path.rstr)
