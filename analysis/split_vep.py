@@ -1,3 +1,5 @@
+import re
+import sys
 import random
 from datetime import datetime
 
@@ -18,8 +20,12 @@ def main():
     log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
     vep_config_path = PathDx('analysis/utils/vep-config.json')
 
-
     hl_init(tmp_dir=tmp_path.rstr, log=log_path)
+
+    if len(sys.argv) > 1:
+        chrs = sys.argv[1:]
+    else:
+        chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
 
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
     for p in b_vcf.listdir():
@@ -28,7 +34,7 @@ def main():
             contig = m.group(1)
             block = m.group(2)
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
-            if contig == '13' and chr_b_path not in tmp_path.listdir():
+            if contig in chrs and chr_b_path not in tmp_path.listdir():
                 print(chr_b_path)
                 try:
                     mt = hl.import_vcf(
