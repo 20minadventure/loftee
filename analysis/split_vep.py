@@ -106,5 +106,12 @@ def main():
     ).result()
     
     result = result.checkpoint((tmp_path / 'result').rstr, overwrite=True)
+    result = result.annotate_entries(
+        value=hl.if_else(
+            result.hc_lof_hom,
+            2,
+            hl.min(result.hc_lof_n_het, 2)
+        )
+    )
     df = result.entries().to_pandas()
-    df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv(f'/opt/notebooks/out-{random.randrange(16 ** 6):04x}.csv')
+    df[['gene_symbol', 's', 'value']].pivot(index='s', columns='gene_symbol', values='value').to_csv(f'/opt/notebooks/out-{random.randrange(16 ** 6):04x}.csv')
