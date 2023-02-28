@@ -12,7 +12,7 @@ from analysis.utils.variant_filtering import VCFFilter
 import pkg_resources
 file_path = pkg_resources.resource_filename('analysis', 'utils/vep-config.json')
 
-def split_annotate(p, out, permit_shuffle=False, vep_config_path=file_path):
+def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
     mt = hl.import_vcf(
         p.rstr,
         force_bgz=True,
