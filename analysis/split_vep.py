@@ -52,7 +52,7 @@ def main():
                 print(chr_b_path)
                 if  chr_b_path in tmp_path.listdir():
                     try:
-                        _mt = hl.read_matrix_table(chr_b_path)
+                        _mt = hl.read_matrix_table(chr_b_path.rstr)
                     except Exception as e:
                         print('Saved matrix table corrupted: rerunning with permit_shuffle=True')
                         split_annotate(p, chr_b_path, permit_shuffle=True)
@@ -105,4 +105,3 @@ def main():
     result = result.checkpoint((tmp_path / 'result').rstr, overwrite=True)
     df = result.entries().to_pandas()
     df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv('file:/opt/notebooks/out.csv')
-    
