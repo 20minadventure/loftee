@@ -49,7 +49,7 @@ def main():
             block = m.group(2)
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs and (block == '10' or block == '9'):
-                print(chr_b_path)
+                print(chr_b_path, flush=True)
                 if  chr_b_path in tmp_path.listdir():
                     try:
                         _mt = hl.read_matrix_table(chr_b_path.rstr)
@@ -104,4 +104,4 @@ def main():
     
     result = result.checkpoint((tmp_path / 'result').rstr, overwrite=True)
     df = result.entries().to_pandas()
-    df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv('file:/opt/notebooks/out.csv')
+    df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv('/opt/notebooks/out.csv')
