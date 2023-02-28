@@ -55,7 +55,11 @@ def main():
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs and block in blocks:
                 print(chr_b_path, flush=True)
-                if  chr_b_path in tmp_path.listdir():
+                try:
+                    tmp_paths_list = tmp_path.listdir()
+                except Exception as e:
+                    tmp_paths_list = []
+                if  chr_b_path in tmp_paths_list:
                     try:
                         _mt = hl.read_matrix_table(chr_b_path.rstr)
                     except Exception as e:
