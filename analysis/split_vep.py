@@ -48,7 +48,7 @@ def main():
             contig = m.group(1)
             block = m.group(2)
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
-            if contig in chrs and (block == '10' or block == '9'):
+            if contig in chrs:
                 print(chr_b_path, flush=True)
                 if  chr_b_path in tmp_path.listdir():
                     try:
