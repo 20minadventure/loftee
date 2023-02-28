@@ -35,10 +35,13 @@ def main():
 
     hl_init(tmp_dir=tmp_path.rstr, log=log_path)
 
+    chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
+    blocks = [str(i) for i in range(100)]
     if len(sys.argv) > 1:
-        chrs = sys.argv[1:]
-    else:
-        chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
+        chrs = [sys.argv[1]]
+    if len(sys.argv) > 2:
+        blocks = sys.argv[2].split(',')
+        
 
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
     out_mts = []
@@ -48,7 +51,7 @@ def main():
             contig = m.group(1)
             block = m.group(2)
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
-            if contig in chrs:
+            if contig in chrs and block in blocks:
                 print(chr_b_path, flush=True)
                 if  chr_b_path in tmp_path.listdir():
                     try:
@@ -104,4 +107,4 @@ def main():
     
     result = result.checkpoint((tmp_path / 'result').rstr, overwrite=True)
     df = result.entries().to_pandas()
-    df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv('/opt/notebooks/out.csv')
+    df[['gene_symbol', 's', 'hc_lof_hom', 'hc_lof_n_het']].pivot(index='s', columns='gene_symbol', values='hc_lof_n_het').to_csv(f'/opt/notebooks/out-{random.randrange(16 ** 6):04x}.csv')
