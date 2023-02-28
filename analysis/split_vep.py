@@ -24,7 +24,7 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=file_path):
     mt.write(out.rstr, overwrite=True)
 
 def main():
-    db_ref = 'wgs_mt'
+    db_ref = 'wes_mt'
     tmp_path = PathDx(database=db_ref)
 
     db_hail_tmp = 'hail_tmp'
