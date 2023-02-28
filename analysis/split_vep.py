@@ -19,7 +19,7 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
         array_elements_required=False,
     )
     mt = hl.split_multi_hts(mt, permit_shuffle=permit_shuffle)
-    mt = hl.vep(mt, vep_config_path)
+    mt = hl.vep(mt, vep_config_path.rstr)
 
     mt.write(out.rstr, overwrite=True)
 
