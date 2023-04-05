@@ -1,10 +1,11 @@
 import re
 import sys
 import random
+import gzip
+from math import ceil
 from datetime import datetime
 
 import hail as hl
-import gzip
 import dxpy
 from analysis.utils.load_spark import hl_init, SC
 from analysis.utils.dxpathlib import PathDx
