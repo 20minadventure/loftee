@@ -115,7 +115,7 @@ def main():
         hc_lof_hom=hl.if_else(result.hc_lof_hom_n == 2, True, False, missing_false=True),
         any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
     )
-    
+
     result = result.checkpoint((hail_tmp_path / 'result').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
@@ -124,7 +124,7 @@ def main():
             hl.min(result.hc_lof_n_het, 2)
         )
     )
-    
+
     result_bm_path = hail_tmp_path / 'result.bm'
     block_size = 512
     print('Save as block matrix', flush=True)
@@ -137,7 +137,7 @@ def main():
 
     arr_t = arr.T
     blocks = 512 * 100
-    out_path = f'/opt/notebooks/out-{'-'.join(chrs)}-{random.randrange(16 ** 6):04x}.csv.gz'
+    out_path = f'/opt/notebooks/out-{"-".join(chrs)}-{random.randrange(16 ** 6):04x}.csv.gz'
     with gzip.open(out_path, 'wt') as f:
         assert len(patients) == arr_t.shape[0]
         assert len(gene_symbols) == arr_t.shape[1]
