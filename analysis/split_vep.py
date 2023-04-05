@@ -7,6 +7,7 @@ from datetime import datetime
 
 import hail as hl
 import dxpy
+import numpy as np
 from analysis.utils.load_spark import hl_init, SC
 from analysis.utils.dxpathlib import PathDx
 from analysis.utils.variant_filtering import VCFFilter
