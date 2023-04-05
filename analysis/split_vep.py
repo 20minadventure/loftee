@@ -4,6 +4,7 @@ import random
 from datetime import datetime
 
 import hail as hl
+import gzip
 import dxpy
 from analysis.utils.load_spark import hl_init, SC
 from analysis.utils.dxpathlib import PathDx
@@ -35,7 +36,7 @@ def main():
 
     log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
 
-    hl_init(tmp_dir=tmp_path.rstr, log=log_path)
+    hl_init(tmp_dir=hail_tmp_path.rstr, log=log_path)
 
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     blocks = [str(i) for i in range(100)]
@@ -104,14 +105,18 @@ def main():
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.vep.transcript_consequences.gene_id, mt_lof.vep.transcript_consequences.gene_symbol)
     result = mt_lof_grouped.aggregate_entries(
-        hc_lof_hom=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')) == 2,
+        hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
         hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
-        any_lof_hom=hl.agg.max(mt_lof.GT.n_alt_alleles()) == 2,
+        any_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles()),
         any_lof_n_het=hl.agg.sum(mt_lof.GT.is_het()),
         n_non_ref=hl.agg.sum(mt_lof.GT.is_non_ref()),
     ).result()
+    result = result.transmute_entries(
+        hc_lof_hom=hl.if_else(result.hc_lof_hom_n == 2, True, False, missing_false=True),
+        any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
+    )
     
-    result = result.checkpoint((tmp_path / 'result').rstr, overwrite=True)
+    result = result.checkpoint((hail_tmp_path / 'result').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
             result.hc_lof_hom,
@@ -119,5 +124,28 @@ def main():
             hl.min(result.hc_lof_n_het, 2)
         )
     )
-    df = result.entries().to_pandas()
-    df[['gene_symbol', 's', 'value']].pivot(index='s', columns='gene_symbol', values='value').to_csv(f'/opt/notebooks/out-{random.randrange(16 ** 6):04x}.csv')
+    
+    result_bm_path = hail_tmp_path / 'result.bm'
+    block_size = 512
+    print('Save as block matrix', flush=True)
+    hl.linalg.BlockMatrix.write_from_entry_expr(result.value, result_bm_path.rstr, block_size=block_size, overwrite=True)
+    arr = hl.linalg.BlockMatrix.read(result_bm_path.rstr)
+
+    print('Export to csv', flush=True)
+    patients = result.s.collect()
+    gene_symbols = result.gene_symbol.collect()
+
+    arr_t = arr.T
+    blocks = 512 * 100
+    out_path = f'/opt/notebooks/out-{'-'.join(chrs)}-{random.randrange(16 ** 6):04x}.csv.gz'
+    with gzip.open(out_path, 'wt') as f:
+        assert len(patients) == arr_t.shape[0]
+        assert len(gene_symbols) == arr_t.shape[1]
+        f.write(f"gene_symbol,{','.join(gene_symbols)}\n")
+        for b in range(ceil(arr_t.shape[0] / blocks)):
+            start = b * blocks
+            end = min((b + 1) * blocks, arr_t.shape[0])
+            arr_np = arr_t[start:end, :].to_numpy().astype(np.int8)
+            for i in range(arr_np.shape[0]):
+                line = f"{patients[i]},{','.join(map(str, arr_np[i, :]))}\n"
+                f.write(line)
