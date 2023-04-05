@@ -28,7 +28,8 @@ def main():
     db_ref = 'wes_mt'
     SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_ref} LOCATION 'dnax://'")
     
-    tmp_path = PathDx(database=db_ref)
+#     tmp_path = PathDx(database=db_ref)
+    tmp_path = PathDx(database_id='database-GPffV5jJ3B1y1JKpGvJ5b7pZ')
 
     db_hail_tmp = 'hail_tmp'
     SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_hail_tmp} LOCATION 'dnax://'")
@@ -64,7 +65,7 @@ def main():
                     try:
                         _mt = hl.read_matrix_table(chr_b_path.rstr)
                     except Exception as e:
-                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True')
+                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
                         split_annotate(p, chr_b_path, permit_shuffle=True)
                 else:
                     try:
@@ -72,11 +73,11 @@ def main():
                     except Exception as e:
                         print('ERROR: ', p)
                         print(e)
-                        print('Rerunning with permit_shuffle=True')
+                        print('Rerunning with permit_shuffle=True', flush=True)
                         try:
                             split_annotate(p, chr_b_path, permit_shuffle=True)
                         except Exception as x:
-                            print(x)
+                            print(x, flush=True)
                             continue
                 out_mts.append(chr_b_path)
     # out table
