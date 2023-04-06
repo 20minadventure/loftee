@@ -143,7 +143,7 @@ def main():
     with gzip.open(out_path, 'wt') as f:
         assert len(patients) == arr_t.shape[0]
         assert len(gene_symbols) == arr_t.shape[1]
-        f.write(f"gene_symbol,{','.join(gene_symbols)}\n")
+        f.write(f"s,{','.join(gene_symbols)}\n")
         for b in range(ceil(arr_t.shape[0] / blocks)):
             start = b * blocks
             end = min((b + 1) * blocks, arr_t.shape[0])
