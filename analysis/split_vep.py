@@ -42,10 +42,13 @@ def main():
 
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     blocks = [str(i) for i in range(100)]
+    eids = None
     if len(sys.argv) > 1:
         chrs = [sys.argv[1]]
     if len(sys.argv) > 2:
-        blocks = sys.argv[2].split(',')
+        eids_path = PathDx('/mnt/project/') / sys.argv[2]
+        with open(eids_path) as f:
+            eids = [eid.rstrip() for eid in f.readlines()]
         
 
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
@@ -85,6 +88,9 @@ def main():
     mt_lof = hl.MatrixTable.union_rows(
         *(hl.read_matrix_table(b.rstr) for b in out_mts)
     )
+    if eids:
+        mt_lof = mt_lof.filter_cols(hl.literal(eids).contains(mt_lof.s))
+        print(f'Missing patients: {set(eids) - set(mt_lof.s.collect())}', flush=True)
 
     CANONICAL = 1
     mt_lof = mt_lof.explode_rows(
