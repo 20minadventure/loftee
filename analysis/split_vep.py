@@ -81,6 +81,7 @@ def main():
                         try:
                             split_annotate(p, chr_b_path, permit_shuffle=True)
                         except Exception as x:
+                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
                             print(x, flush=True)
                             continue
                 out_mts.append(chr_b_path)
