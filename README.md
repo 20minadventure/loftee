@@ -1,26 +1,27 @@
-# Project title (institute-name-subject)
+# Installation
 
-#### Project logline (technique, organism, tissue type)
-Short description of treatment groups/subjects
+```
+pip install git+https://github.com/20minadventure/loftee.git
+```
 
+# Usage
 
-## Methods
-This sections should be a description of preprocessin and analysis ready to be included in the publication
+Chromosome 6 for a set of patients:
+```
+split_vep 6 path/to/eids
+```
 
+Chromosome 6 for all patients:
+```
+split_vep 6
+```
 
-## Preprocessing
-Details of file preprocessing
+All chromosomes for a set of patients:
+```
+split_vep 0 path/to/eids
+```
 
-## Analysis
-Details of analysis
-
-*notes: all files included in the repo need to be referenced, either in README or other .md files. The analysis has to be fully reproducible, in principle the repo should contain code + description of how to run it while data and results kept outside*
-
-## About this template
-Directories:
-- _root_ - README.md, *.Rproj, general configuration files, etc.
-- raw - raw data
-- preprocessing - scripts
-- data - useful data, created by scripts/tools/preprocessing
-- analysis - analysis source code
-- results - output ready to present
+Install and run:
+```
+pip install git+https://github.com/20minadventure/loftee.git && split_vep 13
+```
