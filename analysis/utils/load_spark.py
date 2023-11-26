@@ -17,6 +17,7 @@ if 'aws' in platform.release():
         .builder
         .config('spark.driver.memory', '120G')
         .config('spark.executor.memory', '120G')
+        .config('spark.ui.showConsoleProgress', 'false')
         .enableHiveSupport()
     )
     SC = builder.getOrCreate()
