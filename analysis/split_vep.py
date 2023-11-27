@@ -62,34 +62,14 @@ def main():
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs and block in blocks:
                 print(chr_b_path, flush=True)
-                try:
-                    tmp_paths_list = tmp_path.listdir()
-                except Exception as e:
-                    tmp_paths_list = []
-                if  chr_b_path in tmp_paths_list:
-                    try:
-                        _mt = hl.read_matrix_table(chr_b_path.rstr)
-                    except Exception as e:
-                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
-                        split_annotate(p, chr_b_path, permit_shuffle=True)
-                else:
-                    try:
-                        split_annotate(p, chr_b_path)
-                    except Exception as e:
-                        print('ERROR: ', p)
-                        print(e)
-                        print('Rerunning with permit_shuffle=True', flush=True)
-                        try:
-                            split_annotate(p, chr_b_path, permit_shuffle=True)
-                        except Exception as x:
-                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
-                            print(x, flush=True)
-                            continue
                 out_mts.append(chr_b_path)
+
     # out table
     mt_lof = hl.MatrixTable.union_rows(
         *(hl.read_matrix_table(b.rstr) for b in out_mts)
     )
+    ht = hl.read_table((hail_tmp_path / 'snp_eff_annots.ht').rstr)
+
     if eids:
         mt_lof = mt_lof.filter_cols(hl.literal(eids).contains(mt_lof.s))
         print(f'Missing patients: {set(eids) - set(mt_lof.s.collect())}', flush=True)
@@ -111,8 +91,14 @@ def main():
     )
     all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
+    mt_lof = mt_lof.annotate_rows(
+        snpeff_lof=ht[mt_lof.row_key].lof
+    )
+    mt_lof = mt_lof.annotate_rows(
+        snpeff_lof=mt_lof.snpeff_lof == 'LoF'
+    )
     mt_lof = mt_lof.filter_rows(
-        hl.is_defined(mt_lof.vep.transcript_consequences.lof)
+        mt_lof.snpeff_lof
     )
 
     # Filter VCF
@@ -125,17 +111,12 @@ def main():
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
-        hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
-        hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
-        any_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles()),
-        any_lof_n_het=hl.agg.sum(mt_lof.GT.is_het()),
-        n_non_ref=hl.agg.sum(mt_lof.GT.is_non_ref()),
+        hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.snpeff_lof)),
+        hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.snpeff_lof)),
     ).result()
     result = result.transmute_entries(
         hc_lof_hom=hl.if_else(result.hc_lof_hom_n == 2, True, False, missing_false=True),
-        any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
     )
-
     result = result.checkpoint((hail_tmp_path / 'result').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
