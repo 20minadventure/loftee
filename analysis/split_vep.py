@@ -99,7 +99,8 @@ def main():
         mt_lof.vep.transcript_consequences
     )
     mt_lof = mt_lof.filter_rows(
-        mt_lof.vep.transcript_consequences.canonical == CANONICAL
+        (mt_lof.vep.transcript_consequences.canonical == CANONICAL)
+        & (mt_lof.vep.transcript_consequences.biotype == 'protein_coding')
     )
     mt_lof = mt_lof.annotate_rows(
         gene_name=hl.if_else(
