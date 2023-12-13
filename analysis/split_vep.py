@@ -3,6 +3,7 @@ import sys
 import random
 import gzip
 from math import ceil
+from itertools import chain
 from datetime import datetime
 
 import hail as hl
@@ -100,6 +101,15 @@ def main():
     mt_lof = mt_lof.filter_rows(
         mt_lof.vep.transcript_consequences.canonical == CANONICAL
     )
+    mt_lof = mt_lof.annotate_rows(
+        gene_name=hl.if_else(
+            hl.is_defined(mt_lof.vep.transcript_consequences.gene_symbol),
+            mt_lof.vep.transcript_consequences.gene_symbol,
+            mt_lof.vep.transcript_consequences.gene_id
+        )
+    )
+    all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
+
     mt_lof = mt_lof.filter_rows(
         hl.is_defined(mt_lof.vep.transcript_consequences.lof)
     )
@@ -112,7 +122,7 @@ def main():
     mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
     mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
 
-    mt_lof_grouped = mt_lof.group_rows_by(mt_lof.vep.transcript_consequences.gene_id, mt_lof.vep.transcript_consequences.gene_symbol)
+    mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
         hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
         hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
@@ -142,19 +152,20 @@ def main():
 
     print('Export to csv', flush=True)
     patients = result.s.collect()
-    gene_symbols = result.gene_symbol.collect()
+    gene_names = result.gene_name.collect()
+    zero_genes = all_gene_names - set(gene_names)
 
     arr_t = arr.T
     blocks = 512 * 100
     out_path = f'/opt/notebooks/out-{"-".join(chrs)}-{random.randrange(16 ** 6):04x}.csv.gz'
     with gzip.open(out_path, 'wt') as f:
         assert len(patients) == arr_t.shape[0]
-        assert len(gene_symbols) == arr_t.shape[1]
-        f.write(f"s,{','.join(gene_symbols)}\n")
+        assert len(gene_names) == arr_t.shape[1]
+        f.write(f"s,{','.join(chain(gene_names, zero_genes))}\n")
         for b in range(ceil(arr_t.shape[0] / blocks)):
             start = b * blocks
             end = min((b + 1) * blocks, arr_t.shape[0])
             arr_np = arr_t[start:end, :].to_numpy().astype(np.int8)
             for i in range(arr_np.shape[0]):
-                line = f"{patients[i]},{','.join(map(str, arr_np[i, :]))}\n"
+                line = f"{patients[i]},{','.join(chain(map(str, arr_np[i, :]), '0' * len(zero_genes)))}\n"
                 f.write(line)
