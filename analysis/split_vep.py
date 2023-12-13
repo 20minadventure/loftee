@@ -168,5 +168,5 @@ def main():
             end = min((b + 1) * blocks, arr_t.shape[0])
             arr_np = arr_t[start:end, :].to_numpy().astype(np.int8)
             for i in range(arr_np.shape[0]):
-                line = f"{patients[i]},{','.join(chain(map(str, arr_np[i, :]), '0' * len(zero_genes)))}\n"
+                line = f"{patients[i + start]},{','.join(chain(map(str, arr_np[i, :]), '0' * len(zero_genes)))}\n"
                 f.write(line)
