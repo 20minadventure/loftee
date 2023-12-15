@@ -10,10 +10,10 @@ docker run -v $HOME/.vep:/data ensemblorg/ensembl-vep:release_110.1 INSTALL.pl -
 
 git clone --depth 1 --branch v1.0.4_GRCh38 https://github.com/konradjk/loftee.git $HOME/.vep/plugins/loftee
 
-wget https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz -P $HOME/.vep/plugins/loftee
-wget https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz.fai -P $HOME/.vep/plugins/loftee
-wget https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz.gzi -P $HOME/.vep/plugins/loftee
-wget https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/gerp_conservation_scores.homo_sapiens.GRCh38.bw -P $HOME/.vep/plugins/loftee
+wget -nv -P $HOME/.vep/plugins/loftee https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz
+wget -nv -P $HOME/.vep/plugins/loftee https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz.fai
+wget -nv -P $HOME/.vep/plugins/loftee https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/human_ancestor.fa.gz.gzi
+wget -nv -P $HOME/.vep/plugins/loftee https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/gerp_conservation_scores.homo_sapiens.GRCh38.bw
 
-wget https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/loftee.sql.gz -P $HOME/.vep/plugins/loftee
+wget -nv -P $HOME/.vep/plugins/loftee https://personal.broadinstitute.org/konradk/loftee_data/GRCh38/loftee.sql.gz
 gzip -dc $HOME/.vep/plugins/loftee/loftee.sql.gz > $HOME/.vep/plugins/loftee/loftee.sql
