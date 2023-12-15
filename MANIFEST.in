@@ -1,1 +1,2 @@
 include analysis/utils/vep-config.json
+include preprocessing/install_vep.sh
