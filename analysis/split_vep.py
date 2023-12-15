@@ -33,7 +33,7 @@ def main():
     
     tmp_path = PathDx(database=db_ref)
 
-    db_hail_tmp = 'hail_tmp_bl'
+    db_hail_tmp = 'hail_tmp'
     SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_hail_tmp} LOCATION 'dnax://'")
     hail_tmp_path = PathDx(database=db_hail_tmp)
 
