@@ -52,7 +52,6 @@ def main():
 
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     blocks = [str(i) for i in range(100)]
-    blocks = [str(i) for i in range(1)]
     eids = None
     if len(sys.argv) > 1 and sys.argv[1] in chrs:
         chrs = [sys.argv[1]]
