@@ -33,9 +33,9 @@ def main():
     
     tmp_path = PathDx(database=db_ref)
 
-    db_hail_tmp = 'hail_tmp_bl'
+    db_hail_tmp = 'hail_tmp'
     SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_hail_tmp} LOCATION 'dnax://'")
-    hail_tmp_path = PathDx(database='hail_tmp_bl')
+    hail_tmp_path = PathDx(database=db_hail_tmp)
 
     log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
 
