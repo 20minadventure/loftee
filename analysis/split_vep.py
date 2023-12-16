@@ -28,7 +28,7 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
     mt.write(out.rstr, overwrite=True)
 
 def main():
-    db_ref = 'wes_mt_bl'
+    db_ref = 'wes_mt'
     SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_ref} LOCATION 'dnax://'")
     
     tmp_path = PathDx(database=db_ref)
