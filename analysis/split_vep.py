@@ -44,8 +44,8 @@ def main():
     chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
     blocks = [str(i) for i in range(100)]
     eids = None
-    if len(sys.argv) > 1 and sys.argv[1] in chrs:
-        chrs = [sys.argv[1]]
+    if len(sys.argv) > 1:
+        chrs = sys.argv[1].split(',')
     if len(sys.argv) > 2:
         eids_path = PathDx('/mnt/project/') / sys.argv[2]
         with open(eids_path) as f:
