@@ -2,6 +2,7 @@ import re
 import sys
 import random
 import gzip
+import subprocess
 from math import ceil
 from itertools import chain
 from datetime import datetime
@@ -77,6 +78,10 @@ def annotate_vcf():
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs:
                 print(chr_b_path, flush=True)
+                p_local = PathDx(f'/cluster/{p.name}')
+                print(f'Copying {p_local.rstr}...', flush=True)
+                subprocess.run(['hdfs', 'dfs', '-cp', p.rstr, p_local.rstr], check=True)
+                p = p_local
                 try:
                     tmp_paths_list = tmp_path.listdir()
                 except Exception as e:
@@ -100,6 +105,7 @@ def annotate_vcf():
                             print(x, flush=True)
                             print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY', flush=True)
                             continue
+                subprocess.run(['hdfs', 'dfs', '-rm', '-r', p_local.rstr], check=True)
 
 
 def rare_variants_table():
