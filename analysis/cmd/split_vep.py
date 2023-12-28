@@ -42,6 +42,18 @@ if len(sys.argv) > 2:
         eids = [eid.rstrip() for eid in f.readlines()]
 
 
+def try_to_int(x):
+    try:
+        return int(x)
+    except Exception:
+        return x
+
+
+def nsort(name):
+    sub_names = re.split(r'(\d+)', name)
+    return [try_to_int(n) for n in sub_names]
+
+
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
     mt = hl.import_vcf(
         p.rstr,
@@ -56,8 +68,9 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
 
 def main():
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
+    b_vcf_files = sorted(b_vcf.listdir(), key=lambda f: nsort(f.name))
     out_mts = []
-    for p in b_vcf.listdir():
+    for p in b_vcf_files:
         m = re.fullmatch(r'ukb23157_c(\d{1,2}|X|Y)_b(\d{1,3})_v1.vcf.gz', p.name)
         if m:
             contig = m.group(1)
@@ -65,30 +78,31 @@ def main():
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs:
                 print(chr_b_path, flush=True)
-                try:
-                    tmp_paths_list = tmp_path.listdir()
-                except Exception as e:
-                    tmp_paths_list = []
-                if  chr_b_path in tmp_paths_list:
-                    try:
-                        _mt = hl.read_matrix_table(chr_b_path.rstr)
-                    except Exception as e:
-                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
-                        split_annotate(p, chr_b_path, permit_shuffle=True)
-                else:
-                    try:
-                        split_annotate(p, chr_b_path)
-                    except Exception as e:
-                        print('ERROR: ', p)
-                        print(e)
-                        print('Rerunning with permit_shuffle=True', flush=True)
-                        try:
-                            split_annotate(p, chr_b_path, permit_shuffle=True)
-                        except Exception as x:
-                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
-                            print(x, flush=True)
-                            continue
-                out_mts.append(chr_b_path)
+                # try:
+                #     tmp_paths_list = tmp_path.listdir()
+                # except Exception as e:
+                #     tmp_paths_list = []
+                # if  chr_b_path in tmp_paths_list:
+                #     try:
+                #         _mt = hl.read_matrix_table(chr_b_path.rstr)
+                #     except Exception as e:
+                #         print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
+                #         split_annotate(p, chr_b_path, permit_shuffle=True)
+                # else:
+                #     try:
+                #         split_annotate(p, chr_b_path)
+                #     except Exception as e:
+                #         print('ERROR: ', p)
+                #         print(e)
+                #         print('Rerunning with permit_shuffle=True', flush=True)
+                #         try:
+                #             split_annotate(p, chr_b_path, permit_shuffle=True)
+                #         except Exception as x:
+                #             print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
+                #             print(x, flush=True)
+                #             continue
+                # out_mts.append(chr_b_path)
+    return
     # out table
     mt_lof = hl.MatrixTable.union_rows(
         *(hl.read_matrix_table(b.rstr) for b in out_mts)
