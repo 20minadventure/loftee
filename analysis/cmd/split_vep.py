@@ -91,14 +91,14 @@ def annotate_vcf():
                     try:
                         split_annotate(p, chr_b_path)
                     except Exception as e:
-                        print('ERROR: ', p)
-                        print(e)
+                        print('ERROR: ', p, flush=True)
+                        print(e, flush=True)
                         print('Rerunning with permit_shuffle=True', flush=True)
                         try:
                             split_annotate(p, chr_b_path, permit_shuffle=True)
                         except Exception as x:
-                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
                             print(x, flush=True)
+                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY', flush=True)
                             continue
 
 
