@@ -60,6 +60,7 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
         p.rstr,
         force_bgz=True,
         array_elements_required=False,
+        block_size=64,
     )
     mt = hl.split_multi_hts(mt, permit_shuffle=permit_shuffle)
     mt = hl.vep(mt, vep_config_path.rstr)
