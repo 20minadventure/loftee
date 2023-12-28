@@ -9,7 +9,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'split_vep = analysis.split_vep:main',
+            'split_vep = analysis.cmd.split_vep:main',
             'install_vep = preprocessing.install_vep:main',
         ]
     },

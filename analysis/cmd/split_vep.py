@@ -16,6 +16,33 @@ from analysis.utils.variant_filtering import VCFFilter
 import pkg_resources
 file_path = pkg_resources.resource_filename('analysis', 'utils/vep-config.json')
 
+
+# Initialize hail
+db_ref = 'wes_mt'
+SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_ref} LOCATION 'dnax://'")
+
+tmp_path = PathDx(database=db_ref)
+
+db_hail_tmp = 'hail_tmp'
+SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_hail_tmp} LOCATION 'dnax://'")
+hail_tmp_path = PathDx(database=db_hail_tmp)
+
+log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
+
+hl_init(tmp_dir=hail_tmp_path.rstr, log=log_path)
+
+# Get parameters
+chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
+blocks = [str(i) for i in range(100)]
+eids = None
+if len(sys.argv) > 1:
+    chrs = sys.argv[1].split(',')
+if len(sys.argv) > 2:
+    eids_path = PathDx('/mnt/project/') / sys.argv[2]
+    with open(eids_path) as f:
+        eids = [eid.rstrip() for eid in f.readlines()]
+
+
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
     mt = hl.import_vcf(
         p.rstr,
@@ -27,31 +54,8 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
 
     mt.write(out.rstr, overwrite=True)
 
+
 def main():
-    db_ref = 'wes_mt'
-    SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_ref} LOCATION 'dnax://'")
-    
-    tmp_path = PathDx(database=db_ref)
-
-    db_hail_tmp = 'hail_tmp'
-    SC.sql(f"CREATE DATABASE IF NOT EXISTS {db_hail_tmp} LOCATION 'dnax://'")
-    hail_tmp_path = PathDx(database=db_hail_tmp)
-
-    log_path = f'/tmp/{datetime.now().strftime("%Y%m%d-%H%M")}-{random.randrange(16 ** 6):04x}.log'
-
-    hl_init(tmp_dir=hail_tmp_path.rstr, log=log_path)
-
-    chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
-    blocks = [str(i) for i in range(100)]
-    eids = None
-    if len(sys.argv) > 1:
-        chrs = sys.argv[1].split(',')
-    if len(sys.argv) > 2:
-        eids_path = PathDx('/mnt/project/') / sys.argv[2]
-        with open(eids_path) as f:
-            eids = [eid.rstrip() for eid in f.readlines()]
-        
-
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
     out_mts = []
     for p in b_vcf.listdir():
