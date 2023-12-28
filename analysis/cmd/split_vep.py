@@ -33,7 +33,6 @@ hl_init(tmp_dir=hail_tmp_path.rstr, log=log_path)
 
 # Get parameters
 chrs = [str(i) for i in range(1, 23)] + ['X', 'Y']
-blocks = [str(i) for i in range(100)]
 eids = None
 if len(sys.argv) > 1:
     chrs = sys.argv[1].split(',')
@@ -64,7 +63,7 @@ def main():
             contig = m.group(1)
             block = m.group(2)
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
-            if contig in chrs and block in blocks:
+            if contig in chrs:
                 print(chr_b_path, flush=True)
                 try:
                     tmp_paths_list = tmp_path.listdir()
