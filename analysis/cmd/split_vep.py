@@ -66,10 +66,9 @@ def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_pat
     mt.write(out.rstr, overwrite=True)
 
 
-def main():
+def annotate_vcf():
     b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
     b_vcf_files = sorted(b_vcf.listdir(), key=lambda f: nsort(f.name))
-    out_mts = []
     for p in b_vcf_files:
         m = re.fullmatch(r'ukb23157_c(\d{1,2}|X|Y)_b(\d{1,3})_v1.vcf.gz', p.name)
         if m:
@@ -78,34 +77,78 @@ def main():
             chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
             if contig in chrs:
                 print(chr_b_path, flush=True)
-                # try:
-                #     tmp_paths_list = tmp_path.listdir()
-                # except Exception as e:
-                #     tmp_paths_list = []
-                # if  chr_b_path in tmp_paths_list:
-                #     try:
-                #         _mt = hl.read_matrix_table(chr_b_path.rstr)
-                #     except Exception as e:
-                #         print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
-                #         split_annotate(p, chr_b_path, permit_shuffle=True)
-                # else:
-                #     try:
-                #         split_annotate(p, chr_b_path)
-                #     except Exception as e:
-                #         print('ERROR: ', p)
-                #         print(e)
-                #         print('Rerunning with permit_shuffle=True', flush=True)
-                #         try:
-                #             split_annotate(p, chr_b_path, permit_shuffle=True)
-                #         except Exception as x:
-                #             print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
-                #             print(x, flush=True)
-                #             continue
-                # out_mts.append(chr_b_path)
-    return
+                try:
+                    tmp_paths_list = tmp_path.listdir()
+                except Exception as e:
+                    tmp_paths_list = []
+                if  chr_b_path in tmp_paths_list:
+                    try:
+                        _mt = hl.read_matrix_table(chr_b_path.rstr)
+                    except Exception as e:
+                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
+                        split_annotate(p, chr_b_path, permit_shuffle=True)
+                else:
+                    try:
+                        split_annotate(p, chr_b_path)
+                    except Exception as e:
+                        print('ERROR: ', p)
+                        print(e)
+                        print('Rerunning with permit_shuffle=True', flush=True)
+                        try:
+                            split_annotate(p, chr_b_path, permit_shuffle=True)
+                        except Exception as x:
+                            print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY')
+                            print(x, flush=True)
+                            continue
+
+
+def rare_variants_table():
+    try:
+        tmp_paths_list = tmp_path.listdir()
+    except Exception as e:
+        print(f'No VCF file is annotated', flush=True)
+        return
+
+    b_vcf = PathDx('/mnt/project/Bulk/Exome sequences/Population level exome OQFE variants, pVCF format - final release')
+    b_vcf_files = sorted(b_vcf.listdir(), key=lambda f: nsort(f.name))
+    for chrom in chrs:
+        print(f'Chr {chrom}')
+        out_mts = []
+        for p in b_vcf_files:
+            m = re.fullmatch(r'ukb23157_c(\d{1,2}|X|Y)_b(\d{1,3})_v1.vcf.gz', p.name)
+            if m:
+                contig = m.group(1)
+                block = m.group(2)
+                chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
+                if contig == chrom:
+                    if chr_b_path in tmp_paths_list:
+                        try:
+                            has_success = any(
+                                '_SUCCESS' in file.name
+                                for file in chr_b_path.listdir()
+                            )
+                        except Exception as e:
+                            has_success = False
+                        if has_success:
+                            print(f'{chr_b_path} OK', flush=True)
+                            out_mts.append(chr_b_path)
+                        else:
+                            print(f'{chr_b_path} FAIL', flush=True)
+                            out_mts.append(False)
+                    else:
+                        print(f'{chr_b_path} FAIL', flush=True)
+                        out_mts.append(False)
+        if all(out_mts):
+            out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
+            _chr_table(out_mts, eids, out_path)
+        else:
+            print(f'Some VCF files are not ready', flush=True)
+
+
+def _chr_table(mts, eids, out_path):
     # out table
     mt_lof = hl.MatrixTable.union_rows(
-        *(hl.read_matrix_table(b.rstr) for b in out_mts)
+        *(hl.read_matrix_table(b.rstr) for b in mts)
     )
     if eids:
         mt_lof = mt_lof.filter_cols(hl.literal(eids).contains(mt_lof.s))
@@ -175,7 +218,6 @@ def main():
 
     arr_t = arr.T
     blocks = 512 * 100
-    out_path = f'/opt/notebooks/out-{"-".join(chrs)}-{random.randrange(16 ** 6):04x}.csv.gz'
     with gzip.open(out_path, 'wt') as f:
         assert len(patients) == arr_t.shape[0]
         assert len(gene_names) == arr_t.shape[1]

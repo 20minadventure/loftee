@@ -9,7 +9,8 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'split_vep = analysis.cmd.split_vep:main',
+            'annotate_vcf = analysis.cmd.split_vep:annotate_vcf',
+            'rare_variants_table = analysis.cmd.split_vep:rare_variants_table',
             'install_vep = preprocessing.install_vep:main',
         ]
     },
