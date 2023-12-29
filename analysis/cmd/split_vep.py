@@ -80,20 +80,14 @@ def annotate_vcf():
             if contig in chrs:
                 print(chr_b_path, flush=True)
                 p_local = PathDx(f'/cluster/{p.name}')
-                print(f'Copying {p_local.rstr}...', flush=True)
-                subprocess.run(['hdfs', 'dfs', '-cp', p.rstr, p_local.rstr], check=True)
-                p = p_local
                 try:
                     tmp_paths_list = tmp_path.listdir()
                 except Exception as e:
                     tmp_paths_list = []
-                if  chr_b_path in tmp_paths_list:
-                    try:
-                        _mt = hl.read_matrix_table(chr_b_path.rstr)
-                    except Exception as e:
-                        print('Saved matrix table corrupted: rerunning with permit_shuffle=True', flush=True)
-                        split_annotate(p, chr_b_path, permit_shuffle=True)
-                else:
+                if  chr_b_path not in tmp_paths_list:
+                    print(f'Copying {p_local.rstr}...', flush=True)
+                    subprocess.run(['hdfs', 'dfs', '-cp', p.rstr, p_local.rstr], check=True)
+                    p = p_local
                     try:
                         split_annotate(p, chr_b_path)
                     except Exception as e:
@@ -106,7 +100,7 @@ def annotate_vcf():
                             print(x, flush=True)
                             print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY', flush=True)
                             continue
-                subprocess.run(['hdfs', 'dfs', '-rm', '-r', p_local.rstr], check=True)
+                    subprocess.run(['hdfs', 'dfs', '-rm', '-r', p_local.rstr], check=True)
 
 
 def rare_variants_table():
