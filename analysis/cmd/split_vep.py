@@ -141,10 +141,10 @@ def rare_variants_table():
                             print(f'{chr_b_path} OK', flush=True)
                             out_mts.append(chr_b_path)
                         else:
-                            print(f'{chr_b_path} FAIL', flush=True)
+                            print(f'{chr_b_path} FAIL (no _SUCCESS)', flush=True)
                             out_mts.append(False)
                     else:
-                        print(f'{chr_b_path} FAIL', flush=True)
+                        print(f'{chr_b_path} FAIL (no file)', flush=True)
                         out_mts.append(False)
         if all(out_mts):
             out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
