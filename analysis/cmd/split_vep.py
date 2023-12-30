@@ -190,6 +190,7 @@ def _chr_table(mts, eids, out_path):
     mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
     mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
     mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
+    mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
