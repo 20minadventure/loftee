@@ -100,7 +100,10 @@ def annotate_vcf():
                             print(x, flush=True)
                             print('SECOND TRY FAILED, PLEASE CHECK FILE MANUALLY', flush=True)
                             continue
-                    subprocess.run(['hdfs', 'dfs', '-rm', '-r', p_local.rstr], check=True)
+                    subprocess.run(
+                        ['hdfs', 'dfs', '-rm', '-r', '-skipTrash', p_local.rstr],
+                        check=True
+                    )
 
 
 def rare_variants_table():
