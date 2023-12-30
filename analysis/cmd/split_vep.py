@@ -55,6 +55,10 @@ def nsort(name):
     return [try_to_int(n) for n in sub_names]
 
 
+def mt_name(contig, block):
+    return f'chr-{contig}-b{block}.mt'
+
+
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
     mt = hl.import_vcf(
         p.rstr,
@@ -76,7 +80,7 @@ def annotate_vcf():
         if m:
             contig = m.group(1)
             block = m.group(2)
-            chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
+            chr_b_path = tmp_path / mt_name(contig, block)
             if contig in chrs:
                 print(chr_b_path, flush=True)
                 p_local = PathDx(f'/cluster/{p.name}')
@@ -123,7 +127,7 @@ def rare_variants_table():
             if m:
                 contig = m.group(1)
                 block = m.group(2)
-                chr_b_path = tmp_path / f'chr-{contig}-b{block}.mt'
+                chr_b_path = tmp_path / mt_name(contig, block)
                 if contig == chrom:
                     if chr_b_path in tmp_paths_list:
                         try:
