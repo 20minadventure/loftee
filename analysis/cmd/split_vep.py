@@ -5,6 +5,7 @@ import gzip
 import subprocess
 from math import ceil
 from itertools import chain
+from functools import reduce
 from datetime import datetime
 
 import hail as hl
@@ -57,6 +58,11 @@ def nsort(name):
 
 def mt_name(contig, block):
     return f'chr-{contig}-b{block}.mt'
+
+
+def match(a, b):
+    b_dict = {x: i for i, x in enumerate(b)}
+    return [b_dict.get(x, None) for x in a]
 
 
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
@@ -154,13 +160,18 @@ def rare_variants_table():
 
 
 def _chr_table(chrom, mts, eids, out_path):
-    # out table
-    mt_lof = hl.MatrixTable.union_rows(
-        *(hl.read_matrix_table(b.rstr) for b in mts)
-    )
+    print('unify colnames', flush=True)
+    mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
+    mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
+    master_pats = reduce(lambda x, y: set(x) & set(y), mts_patients.values())
     if eids:
-        mt_lof = mt_lof.filter_cols(hl.literal(eids).contains(mt_lof.s))
-        print(f'Missing patients: {set(eids) - set(mt_lof.s.collect())}', flush=True)
+        master_pats &= set(eids)
+    mts_unified = []
+    for b, pats in mts_patients.items():
+        pat_indices = match(list(master_pats), pats)
+        mts_unified.append(mts_dict[b].choose_cols(pat_indices))
+    # out table
+    mt_lof = hl.MatrixTable.union_rows(*mts_unified)
 
     CANONICAL = 1
     mt_lof = mt_lof.explode_rows(
@@ -177,6 +188,7 @@ def _chr_table(chrom, mts, eids, out_path):
             mt_lof.vep.transcript_consequences.gene_id
         )
     )
+    mt_lof = mt_lof.checkpoint((hail_tmp_path / f'result-{chrom}-0').rstr, overwrite=True)
     all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
     mt_lof = mt_lof.filter_rows(
@@ -205,7 +217,7 @@ def _chr_table(chrom, mts, eids, out_path):
         any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
     )
 
-    result = result.checkpoint((hail_tmp_path / f'result-{chrom}').rstr, overwrite=True)
+    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
             result.hc_lof_hom,
