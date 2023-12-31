@@ -148,12 +148,12 @@ def rare_variants_table():
                         out_mts.append(False)
         if all(out_mts):
             out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
-            _chr_table(out_mts, eids, out_path)
+            _chr_table(chrom, out_mts, eids, out_path)
         else:
             print(f'Some VCF files are not ready', flush=True)
 
 
-def _chr_table(mts, eids, out_path):
+def _chr_table(chrom, mts, eids, out_path):
     # out table
     mt_lof = hl.MatrixTable.union_rows(
         *(hl.read_matrix_table(b.rstr) for b in mts)
@@ -205,7 +205,7 @@ def _chr_table(mts, eids, out_path):
         any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
     )
 
-    result = result.checkpoint((hail_tmp_path / 'result').rstr, overwrite=True)
+    result = result.checkpoint((hail_tmp_path / f'result-{chrom}').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
             result.hc_lof_hom,
@@ -214,7 +214,7 @@ def _chr_table(mts, eids, out_path):
         )
     )
 
-    result_bm_path = hail_tmp_path / 'result.bm'
+    result_bm_path = hail_tmp_path / f'result-{chrom}.bm'
     block_size = 512
     print('Save as block matrix', flush=True)
     hl.linalg.BlockMatrix.write_from_entry_expr(result.value, result_bm_path.rstr, block_size=block_size, overwrite=True)
