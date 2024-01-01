@@ -153,71 +153,73 @@ def rare_variants_table():
                         print(f'{chr_b_path} FAIL (no file)', flush=True)
                         out_mts.append(False)
         if all(out_mts):
-            out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
+            out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz' # przniesc do funkcji niżej
             _chr_table(chrom, out_mts, eids, out_path)
         else:
             print(f'Some VCF files are not ready', flush=True)
 
 
 def _chr_table(chrom, mts, eids, out_path):
-    print('unify colnames', flush=True)
-    mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
-    mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
-    master_pats = reduce(lambda x, y: set(x) & set(y), mts_patients.values())
-    if eids:
-        master_pats &= set(eids)
-    mts_unified = []
-    for b, pats in mts_patients.items():
-        pat_indices = match(list(master_pats), pats)
-        mts_unified.append(mts_dict[b].choose_cols(pat_indices))
-    # out table
-    mt_lof = hl.MatrixTable.union_rows(*mts_unified)
+    # print('unify colnames', flush=True)
+    # mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
+    # mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
+    # master_pats = reduce(lambda x, y: set(x) & set(y), mts_patients.values())
+    # if eids:
+    #     master_pats &= set(eids)
+    # mts_unified = []
+    # for b, pats in mts_patients.items():
+    #     pat_indices = match(list(master_pats), pats)
+    #     mts_unified.append(mts_dict[b].choose_cols(pat_indices))
+    # # out table
+    # mt_lof = hl.MatrixTable.union_rows(*mts_unified)
 
-    CANONICAL = 1
-    mt_lof = mt_lof.explode_rows(
-        mt_lof.vep.transcript_consequences
-    )
-    mt_lof = mt_lof.filter_rows(
-        (mt_lof.vep.transcript_consequences.canonical == CANONICAL)
-        & (mt_lof.vep.transcript_consequences.biotype == 'protein_coding')
-    )
-    mt_lof = mt_lof.annotate_rows(
-        gene_name=hl.if_else(
-            hl.is_defined(mt_lof.vep.transcript_consequences.gene_symbol),
-            mt_lof.vep.transcript_consequences.gene_symbol,
-            mt_lof.vep.transcript_consequences.gene_id
-        )
-    )
-    mt_lof = mt_lof.checkpoint((hail_tmp_path / f'result-{chrom}-0').rstr, overwrite=True)
+    # CANONICAL = 1
+    # mt_lof = mt_lof.explode_rows(
+    #     mt_lof.vep.transcript_consequences
+    # )
+    # mt_lof = mt_lof.filter_rows(
+    #     (mt_lof.vep.transcript_consequences.canonical == CANONICAL)
+    #     & (mt_lof.vep.transcript_consequences.biotype == 'protein_coding')
+    # )
+    # mt_lof = mt_lof.annotate_rows(
+    #     gene_name=hl.if_else(
+    #         hl.is_defined(mt_lof.vep.transcript_consequences.gene_symbol),
+    #         mt_lof.vep.transcript_consequences.gene_symbol,
+    #         mt_lof.vep.transcript_consequences.gene_id
+    #     )
+    # )
+    # mt_lof = mt_lof.checkpoint((hail_tmp_path / f'result-{chrom}-0').rstr, overwrite=True)
+    mt_lof = hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-0').rstr)
     all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
-    mt_lof = mt_lof.filter_rows(
-        hl.is_defined(mt_lof.vep.transcript_consequences.lof)
-    )
+    # mt_lof = mt_lof.filter_rows(
+    #     hl.is_defined(mt_lof.vep.transcript_consequences.lof)
+    # )
 
-    # Filter VCF
-    mt_filter = VCFFilter()
-    mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
-    mt_lof = hl.variant_qc(mt_lof)
-    mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
-    mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
-    mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
-    mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
+    # # Filter VCF
+    # mt_filter = VCFFilter()
+    # mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
+    # mt_lof = hl.variant_qc(mt_lof)
+    # mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
+    # mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
+    # mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
+    # mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
 
-    mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
-    result = mt_lof_grouped.aggregate_entries(
-        hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
-        hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
-        any_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles()),
-        any_lof_n_het=hl.agg.sum(mt_lof.GT.is_het()),
-        n_non_ref=hl.agg.sum(mt_lof.GT.is_non_ref()),
-    ).result()
-    result = result.transmute_entries(
-        hc_lof_hom=hl.if_else(result.hc_lof_hom_n == 2, True, False, missing_false=True),
-        any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
-    )
+    # mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
+    # result = mt_lof_grouped.aggregate_entries(
+    #     hc_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
+    #     hc_lof_n_het=hl.agg.sum(mt_lof.GT.is_het() * (mt_lof.vep.transcript_consequences.lof == 'HC')),
+    #     any_lof_hom_n=hl.agg.max(mt_lof.GT.n_alt_alleles()),
+    #     any_lof_n_het=hl.agg.sum(mt_lof.GT.is_het()),
+    #     n_non_ref=hl.agg.sum(mt_lof.GT.is_non_ref()),
+    # ).result()
+    # result = result.transmute_entries(
+    #     hc_lof_hom=hl.if_else(result.hc_lof_hom_n == 2, True, False, missing_false=True),
+    #     any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
+    # )
 
-    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1').rstr, overwrite=True)
+    # result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1').rstr, overwrite=True)
+    result = hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-1').rstr)
     result = result.annotate_entries(
         value=hl.if_else(
             result.hc_lof_hom,
