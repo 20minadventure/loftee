@@ -189,8 +189,8 @@ def _chr_table(chrom, mts, eids, out_path):
     #     )
     # )
     # mt_lof = mt_lof.checkpoint((hail_tmp_path / f'result-{chrom}-0').rstr, overwrite=True)
-    mt_lof = hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-0').rstr)
-    all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
+    # mt_lof = hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-0').rstr)
+    # all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
     # mt_lof = mt_lof.filter_rows(
     #     hl.is_defined(mt_lof.vep.transcript_consequences.lof)
@@ -232,6 +232,7 @@ def _chr_table(chrom, mts, eids, out_path):
     block_size = 512
     print('Save as block matrix', flush=True)
     hl.linalg.BlockMatrix.write_from_entry_expr(result.value, result_bm_path.rstr, block_size=block_size, overwrite=True)
+    return
     arr = hl.linalg.BlockMatrix.read(result_bm_path.rstr)
 
     print('Export to csv', flush=True)
