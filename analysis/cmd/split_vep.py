@@ -153,13 +153,12 @@ def rare_variants_table():
                         print(f'{chr_b_path} FAIL (no file)', flush=True)
                         out_mts.append(False)
         if all(out_mts):
-            out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
-            _chr_table(chrom, out_mts, eids, out_path)
+            _chr_table(chrom, out_mts, eids)
         else:
             print(f'Some VCF files are not ready', flush=True)
 
 
-def _chr_table(chrom, mts, eids, out_path):
+def _chr_table(chrom, mts, eids):
     print('Unifying colnames...', flush=True)
     mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
     mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
@@ -240,6 +239,7 @@ def _chr_table(chrom, mts, eids, out_path):
 
     arr_t = arr.T
     blocks = 512 * 100
+    out_path = f'/opt/notebooks/out-{chrom}-{random.randrange(16 ** 6):04x}.csv.gz'
     with gzip.open(out_path, 'wt') as f:
         assert len(patients) == arr_t.shape[0]
         assert len(gene_names) == arr_t.shape[1]
