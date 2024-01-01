@@ -217,7 +217,6 @@ def _chr_table(chrom, mts, eids):
         any_lof_hom=hl.if_else(result.any_lof_hom_n == 2, True, False, missing_false=True),
     )
 
-    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1').rstr, overwrite=True)
     result = result.annotate_entries(
         value=hl.if_else(
             result.hc_lof_hom,
@@ -225,6 +224,7 @@ def _chr_table(chrom, mts, eids):
             hl.min(result.hc_lof_n_het, 2)
         )
     )
+    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1b').rstr, overwrite=True)
 
     result_bm_path = hail_tmp_path / f'result-{chrom}.bm'
     block_size = 512
