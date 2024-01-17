@@ -3,7 +3,7 @@ import sys
 import random
 import gzip
 import subprocess
-from math import ceil
+from math import ceil, floor
 from itertools import chain
 from functools import reduce
 from datetime import datetime
@@ -63,6 +63,20 @@ def mt_name(contig, block):
 def match(a, b):
     b_dict = {x: i for i, x in enumerate(b)}
     return [b_dict.get(x, None) for x in a]
+
+
+def split_list(n, k):
+    """Iterate through slices spliting list of length n into k lists of equal
+    size, eg:
+    n = 5, k = 3
+    return: (0, 2), (2, 4), (4, 5)"""
+    avg_length, remainder = divmod(n, k)
+    start = 0
+
+    for i in range(k):
+        end = start + avg_length + (1 if i < remainder else 0)
+        yield start, end
+        start = end
 
 
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
@@ -162,7 +176,7 @@ def _chr_table(chrom, mts, eids):
     print('Unifying colnames...', flush=True)
     mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
     mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
-    common_pats = reduce(lambda x, y: set(x) & set(y), mts_patients.values())
+    common_pats = reduce(lambda x, y: x & y, (set(p) for p in mts_patients.values()))
     if eids:
         common_pats &= set(eids)
     mts_unified = []
@@ -171,10 +185,12 @@ def _chr_table(chrom, mts, eids):
         mts_unified.append(mts_dict[b].choose_cols(pat_indices))
 
     # out table
-    max_mts = 40
-    parts = ceil(len(mts) / max_mts)
-    for i in range(parts):
-        mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * max_mts:(i + 1) * max_mts])
+    min_batch = 19
+    n, k = len(mts), max(1, floor(len(mts) / min_batch))
+    all_gene_names = set()
+    for i, (start, end) in enumerate(split_list(n, k)):
+        print(f'Part {i}: [{start}:{end}]', flush=True)
+        mt_lof = hl.MatrixTable.union_rows(*mts_unified[start:end])
 
         CANONICAL = 1
         mt_lof = mt_lof.explode_rows(
@@ -191,30 +207,32 @@ def _chr_table(chrom, mts, eids):
                 mt_lof.vep.transcript_consequences.gene_id
             )
         )
-        mt_lof.write((hail_tmp_path / f'result-{chrom}-0-p{i}').rstr, overwrite=True)
+        print('....aggregating names', flush=True)
+        all_gene_names |= mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
+        print('....filtering', flush=True)
+        mt_lof = mt_lof.filter_rows(
+            hl.is_defined(mt_lof.vep.transcript_consequences.lof)
+        )
+
+        # Filter VCF
+        mt_filter = VCFFilter()
+        mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
+        mt_lof = hl.variant_qc(mt_lof)
+        mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
+        mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
+        mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
+        mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
+        mt_lof.write(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr, overwrite=True)
+
+    print('Unioning all', flush=True)
     mt_lof = hl.MatrixTable.union_rows(
         *[
-            hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-0-p{i}').rstr)
-            for i in range(parts)
+            hl.read_matrix_table(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr)
+            for i in range(k)
         ]
     )
-
     mt_lof = mt_lof.checkpoint(PathDx(f'/cluster/result-{chrom}-0').rstr, overwrite=True)
-    all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
-
-    mt_lof = mt_lof.filter_rows(
-        hl.is_defined(mt_lof.vep.transcript_consequences.lof)
-    )
-
-    # Filter VCF
-    mt_filter = VCFFilter()
-    mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
-    mt_lof = hl.variant_qc(mt_lof)
-    mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
-    mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
-    mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
-    mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
@@ -236,9 +254,9 @@ def _chr_table(chrom, mts, eids):
             hl.min(result.hc_lof_n_het, 2)
         )
     )
-    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1b').rstr, overwrite=True)
+    result = result.checkpoint(PathDx(f'/cluster/result-{chrom}-1b').rstr, overwrite=True)
 
-    result_bm_path = hail_tmp_path / f'result-{chrom}.bm'
+    result_bm_path = PathDx(f'/cluster/result-{chrom}.bm')
     block_size = 512
     print('Save as block matrix', flush=True)
     hl.linalg.BlockMatrix.write_from_entry_expr(result.value, result_bm_path.rstr, block_size=block_size, overwrite=True)
