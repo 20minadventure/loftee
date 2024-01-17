@@ -171,24 +171,36 @@ def _chr_table(chrom, mts, eids):
         mts_unified.append(mts_dict[b].choose_cols(pat_indices))
 
     # out table
-    mt_lof = hl.MatrixTable.union_rows(*mts_unified)
+    max_mts = 40
+    parts = ceil(len(mts) / max_mts)
+    for i in range(parts):
+        mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * max_mts:(i + 1) * max_mts])
 
-    CANONICAL = 1
-    mt_lof = mt_lof.explode_rows(
-        mt_lof.vep.transcript_consequences
-    )
-    mt_lof = mt_lof.filter_rows(
-        (mt_lof.vep.transcript_consequences.canonical == CANONICAL)
-        & (mt_lof.vep.transcript_consequences.biotype == 'protein_coding')
-    )
-    mt_lof = mt_lof.annotate_rows(
-        gene_name=hl.if_else(
-            hl.is_defined(mt_lof.vep.transcript_consequences.gene_symbol),
-            mt_lof.vep.transcript_consequences.gene_symbol,
-            mt_lof.vep.transcript_consequences.gene_id
+        CANONICAL = 1
+        mt_lof = mt_lof.explode_rows(
+            mt_lof.vep.transcript_consequences
         )
+        mt_lof = mt_lof.filter_rows(
+            (mt_lof.vep.transcript_consequences.canonical == CANONICAL)
+            & (mt_lof.vep.transcript_consequences.biotype == 'protein_coding')
+        )
+        mt_lof = mt_lof.annotate_rows(
+            gene_name=hl.if_else(
+                hl.is_defined(mt_lof.vep.transcript_consequences.gene_symbol),
+                mt_lof.vep.transcript_consequences.gene_symbol,
+                mt_lof.vep.transcript_consequences.gene_id
+            )
+        )
+        mt_lof.write((hail_tmp_path / f'result-{chrom}-0-p{i}').rstr, overwrite=True)
+
+    mt_lof = hl.MatrixTable.union_rows(
+        *[
+            hl.read_matrix_table((hail_tmp_path / f'result-{chrom}-0-p{i}').rstr)
+            for i in range(parts)
+        ]
     )
-    mt_lof = mt_lof.checkpoint((hail_tmp_path / f'result-{chrom}-0').rstr, overwrite=True)
+
+    mt_lof = mt_lof.checkpoint(PathDx(f'/cluster/result-{chrom}-0').rstr, overwrite=True)
     all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
 
     mt_lof = mt_lof.filter_rows(
