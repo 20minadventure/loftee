@@ -171,12 +171,15 @@ def _chr_table(chrom, mts, eids):
         mts_unified.append(mts_dict[b].choose_cols(pat_indices))
 
     # out table
-    max_mts = 20
-    parts = ceil(len(mts) / max_mts)
+    if len(mts) > 25:
+        parts = 4
+    else:
+        parts = 1
+    batch = ceil(len(mts) / parts)
     all_gene_names = set()
     for i in range(parts):
         print(f'Part {i}', flush=True)
-        mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * max_mts:(i + 1) * max_mts])
+        mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * batch:(i + 1) * batch])
 
         CANONICAL = 1
         mt_lof = mt_lof.explode_rows(
