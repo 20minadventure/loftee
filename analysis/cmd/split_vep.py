@@ -253,9 +253,9 @@ def _chr_table(chrom, mts, eids):
             hl.min(result.hc_lof_n_het, 2)
         )
     )
-    result = result.checkpoint((hail_tmp_path / f'result-{chrom}-1b').rstr, overwrite=True)
+    result = result.checkpoint(PathDx(f'/cluster/result-{chrom}-1b').rstr, overwrite=True)
 
-    result_bm_path = hail_tmp_path / f'result-{chrom}.bm'
+    result_bm_path = PathDx(f'/cluster/result-{chrom}.bm')
     block_size = 512
     print('Save as block matrix', flush=True)
     hl.linalg.BlockMatrix.write_from_entry_expr(result.value, result_bm_path.rstr, block_size=block_size, overwrite=True)
