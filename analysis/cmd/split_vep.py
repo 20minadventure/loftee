@@ -186,7 +186,7 @@ def _chr_table(chrom, mts, eids):
 
     # out table
     min_batch = 19
-    n, k = len(mts), floor(n / min_batch)
+    n, k = len(mts), floor(len(mts) / min_batch)
     all_gene_names = set()
     for i, (start, end) in enumerate(split_list(n, k)):
         print(f'Part {i}: [{start}:{end}]', flush=True)
