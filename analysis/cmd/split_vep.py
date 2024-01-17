@@ -171,9 +171,9 @@ def _chr_table(chrom, mts, eids):
         mts_unified.append(mts_dict[b].choose_cols(pat_indices))
 
     # out table
-    max_mts = 40
+    max_mts = 20
     parts = ceil(len(mts) / max_mts)
-    mt_lof_parts = []
+    all_gene_names = set()
     for i in range(parts):
         print(f'Part {i}', flush=True)
         mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * max_mts:(i + 1) * max_mts])
@@ -193,36 +193,31 @@ def _chr_table(chrom, mts, eids):
                 mt_lof.vep.transcript_consequences.gene_id
             )
         )
-        mt_lof_parts.append(mt_lof)
-        # mt_lof.write((hail_tmp_path / f'result-{chrom}-0-p{i}').rstr, overwrite=True)
-        # mt_lof.write(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr, overwrite=True)
+        print('....aggregating names', flush=True)
+        all_gene_names |= mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
+
+        print('....filtering', flush=True)
+        mt_lof = mt_lof.filter_rows(
+            hl.is_defined(mt_lof.vep.transcript_consequences.lof)
+        )
+
+        # Filter VCF
+        mt_filter = VCFFilter()
+        mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
+        mt_lof = hl.variant_qc(mt_lof)
+        mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
+        mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
+        mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
+        mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
+        mt_lof.write(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr, overwrite=True)
 
     print('Unioning all', flush=True)
-    mt_lof = hl.MatrixTable.union_rows(*mt_lof_parts)
-    # mt_lof = hl.MatrixTable.union_rows(
-    #     *[
-    #         hl.read_matrix_table(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr)
-    #         for i in range(parts)
-    #     ]
-    # )
-
-    mt_lof = mt_lof.checkpoint(PathDx(f'/cluster/result-{chrom}-0').rstr, overwrite=True)
-    print('aggregating names', flush=True)
-    all_gene_names = mt_lof.aggregate_rows(hl.agg.collect_as_set(mt_lof.gene_name))
-
-    print('filtering', flush=True)
-    mt_lof = mt_lof.filter_rows(
-        hl.is_defined(mt_lof.vep.transcript_consequences.lof)
+    mt_lof = hl.MatrixTable.union_rows(
+        *[
+            hl.read_matrix_table(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr)
+            for i in range(parts)
+        ]
     )
-
-    # Filter VCF
-    mt_filter = VCFFilter()
-    mt_lof = mt_filter.mean_read_depth(mt_lof, min_depth=7)
-    mt_lof = hl.variant_qc(mt_lof)
-    mt_lof = mt_filter.variant_missingness(mt_lof, min_ratio=0.1)
-    mt_lof = mt_filter.hardy_weinberg(mt_lof, min_p_value=1e-15)
-    mt_lof = mt_filter.allele_balance(mt_lof, n_sample=1, min_ratio=0.15)
-    mt_lof = mt_lof.filter_rows(~mt_lof.was_split)
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
