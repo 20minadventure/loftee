@@ -3,7 +3,7 @@ import sys
 import random
 import gzip
 import subprocess
-from math import ceil
+from math import ceil, floor
 from itertools import chain
 from functools import reduce
 from datetime import datetime
@@ -63,6 +63,20 @@ def mt_name(contig, block):
 def match(a, b):
     b_dict = {x: i for i, x in enumerate(b)}
     return [b_dict.get(x, None) for x in a]
+
+
+def split_list(n, k):
+    """Iterate through slices spliting list of length n into k lists of equal
+    size, eg:
+    n = 5, k = 3
+    return: (0, 2), (2, 4), (4, 5)"""
+    avg_length, remainder = divmod(n, k)
+    start = 0
+
+    for i in range(k):
+        end = start + avg_length + (1 if i < remainder else 0)
+        yield start, end
+        start = end
 
 
 def split_annotate(p, out, permit_shuffle=False, vep_config_path=PathDx(file_path)):
@@ -171,15 +185,12 @@ def _chr_table(chrom, mts, eids):
         mts_unified.append(mts_dict[b].choose_cols(pat_indices))
 
     # out table
-    if len(mts) > 25:
-        parts = 4
-    else:
-        parts = 1
-    batch = ceil(len(mts) / parts)
+    min_batch = 19
+    n, k = len(mts), floor(n / min_batch)
     all_gene_names = set()
-    for i in range(parts):
-        print(f'Part {i}', flush=True)
-        mt_lof = hl.MatrixTable.union_rows(*mts_unified[i * batch:(i + 1) * batch])
+    for i, (start, end) in enumerate(split_list(n, k)):
+        print(f'Part {i}: [{start}:{end}]', flush=True)
+        mt_lof = hl.MatrixTable.union_rows(*mts_unified[start:end])
 
         CANONICAL = 1
         mt_lof = mt_lof.explode_rows(
@@ -218,7 +229,7 @@ def _chr_table(chrom, mts, eids):
     mt_lof = hl.MatrixTable.union_rows(
         *[
             hl.read_matrix_table(PathDx(f'/cluster/result-{chrom}-0-p{i}').rstr)
-            for i in range(parts)
+            for i in range(k)
         ]
     )
 
