@@ -232,6 +232,7 @@ def _chr_table(chrom, mts, eids):
             for i in range(k)
         ]
     )
+    mt_lof = mt_lof.checkpoint(PathDx(f'/cluster/result-{chrom}-0').rstr, overwrite=True)
 
     mt_lof_grouped = mt_lof.group_rows_by(mt_lof.gene_name)
     result = mt_lof_grouped.aggregate_entries(
