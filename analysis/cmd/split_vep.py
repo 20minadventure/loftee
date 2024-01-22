@@ -176,7 +176,7 @@ def _chr_table(chrom, mts, eids):
     print('Unifying colnames...', flush=True)
     mts_dict = {b: hl.read_matrix_table(b.rstr) for b in mts}
     mts_patients = {b: mt.s.collect() for b, mt in mts_dict.items()}
-    common_pats = reduce(lambda x, y: set(x) & set(y), mts_patients.values())
+    common_pats = reduce(lambda x, y: x & y, (set(p) for p in mts_patients.values()))
     if eids:
         common_pats &= set(eids)
     mts_unified = []
@@ -186,7 +186,7 @@ def _chr_table(chrom, mts, eids):
 
     # out table
     min_batch = 19
-    n, k = len(mts), floor(len(mts) / min_batch)
+    n, k = len(mts), max(1, floor(len(mts) / min_batch))
     all_gene_names = set()
     for i, (start, end) in enumerate(split_list(n, k)):
         print(f'Part {i}: [{start}:{end}]', flush=True)
